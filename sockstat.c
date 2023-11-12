@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < npids; i++) {
         /* PID => FDs */
         if ((mfds = proc_pidinfo(pids[i], PROC_PIDLISTFDS, 0, fds, sizeof(struct proc_fdinfo) * FDS_MAX))) {
-            proc_pidinfo(pids[i], PROC_PIDTBSDINFO, 0, &pinfo, sizeof(info));                    /* a PIDs => PID */
+            proc_pidinfo(pids[i], PROC_PIDTBSDINFO, 0, &pinfo, sizeof(pinfo));                    /* a PIDs => PID */
 
             nfds = (int)(mfds / sizeof(struct proc_fdinfo));
             for (int k = 0; k < nfds; k++) {
