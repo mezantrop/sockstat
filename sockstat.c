@@ -24,36 +24,63 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#include <sys/types.h>
+#include <pwd.h>
+#include <uuid/uuid.h>
+
 #include <arpa/inet.h>
 
 #include <libproc.h>
 
 /* ------------------------------------------------------------------------------------------------------------------ */
+void usage(int ecode);
+
+/* ------------------------------------------------------------------------------------------------------------------ */
+#define PROG_NAME       "sockstat"
+#define PROG_VERSION    "0.1"
+
 #define PID_MAX 99999
 #define FDS_MAX 200000
 
 #define INET_ADDRPORTSTRLEN INET6_ADDRSTRLEN + 6    /* MAX: ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff + ':' + '65535' */
 
 /* ------------------------------------------------------------------------------------------------------------------ */
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     int *pids = NULL;                                                           /* PIDs array buffer */
     int npids = 0;                                                              /* Number of PIDs */
     static struct proc_fdinfo *fds = NULL;                                      /* FDs array */
     int mfds = 0, nfds = 0;                                                     /* Memory and number of FDS */
     struct proc_bsdinfo pinfo;
     struct socket_fdinfo si;
-
+    struct passwd *pwd;
     char lbuf[INET_ADDRPORTSTRLEN] = {0};                                       /* Buffers to store local & */
     char rbuf[INET_ADDRPORTSTRLEN] = {0};                                       /* remote IPv4/6 addresses */
+    int flg, i4 = 0, i6 = 0, u = 0;
 
+
+    while ((flg = getopt(argc, argv, "46uh")) != -1)
+        switch(flg) {
+            case '4':
+            break;
+
+            case '6':
+            break;
+
+            case 'u':
+            break;
+
+            case 'h':
+            default:
+                (void)usage(0);
+        }
 
     pids = (int *)malloc(sizeof(int) * PID_MAX);                                /* TODO: REDUCE MEMORY! */
     npids = proc_listpids(PROC_ALL_PIDS, 0, pids, sizeof(int) * PID_MAX);       /* PIDs */
 
     fds = (struct proc_fdinfo *)malloc(sizeof(struct proc_fdinfo) * FDS_MAX);   /* TODO: REDUCE MEMORY! */
 
-    printf("%-5s %-31s %-3s %-5s %-40s %-40s\n",
-        "PID", "COMMAND", "FD", "PROTO", "LOCAL ADDRESS", "REMOTE ADDRESS");
+    printf("%-20s %-5s %-31s %-3s %-5s %s\n",
+        "USER", "PID", "COMMAND", "FD", "PROTO", "LOCAL ADDRESS / REMOTE ADDRESS");
 
     for (int i = 0; i < npids; i++) {
         /* PID => FDs */
@@ -64,32 +91,35 @@ int main(int argc, char *argv[]) {
             for (int k = 0; k < nfds; k++) {
                 if (proc_pidfdinfo(pids[i], fds[k].proc_fd, PROC_PIDFDSOCKETINFO, &si, sizeof(si)) >= sizeof(si)) {
 
+                    pwd = getpwuid(pinfo.pbi_uid);
+
                     /* NB! pbi_name could be forged: setprogname(3) */
-                    printf("%-5d %-31s %-3d",
-                        pinfo.pbi_pid, pinfo.pbi_name[0] ? pinfo.pbi_name : pinfo.pbi_comm, fds[k].proc_fd);
+                    printf("%-20s %-5d %-31s %-3d",
+                        pwd->pw_name, pinfo.pbi_pid,
+                        pinfo.pbi_name[0] ? pinfo.pbi_name : pinfo.pbi_comm, fds[k].proc_fd);
 
                     switch (si.psi.soi_family) {
                         case AF_INET:
                             if (si.psi.soi_kind == SOCKINFO_TCP) {                              /* IPv4 TCP */
-                                printf(" %-5s %34s:%-5d", "tcp4",
+                                printf(" %-5s %s:%d", "tcp4",
                                     inet_ntop(AF_INET,
                                         &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_46.i46a_addr4,
                                         lbuf, INET_ADDRSTRLEN),
                                     ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport));
 
-                                printf(" %34s:%-5d",
+                                printf(" %s:%d",
                                     inet_ntop(AF_INET,
                                         &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_46.i46a_addr4,
                                         rbuf, INET_ADDRSTRLEN),
                                     ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport));
                             } else {                                                            /* IPv4 UDP */
-                                printf(" %-5s %34s:%-5d", "udp4",
+                                printf(" %-5s %s:%d", "udp4",
                                     inet_ntop(AF_INET,
                                         &si.psi.soi_proto.pri_in.insi_laddr.ina_46.i46a_addr4,
                                         lbuf, INET_ADDRSTRLEN),
                                     ntohs(si.psi.soi_proto.pri_in.insi_lport));
 
-                                printf(" %34s:%-5d",
+                                printf(" %s:%d",
                                     inet_ntop(AF_INET,
                                         &si.psi.soi_proto.pri_in.insi_faddr.ina_46.i46a_addr4,
                                         rbuf, INET_ADDRSTRLEN),
@@ -99,25 +129,25 @@ int main(int argc, char *argv[]) {
 
                         case AF_INET6:
                             if (si.psi.soi_kind == SOCKINFO_TCP) {                              /* IPv6 TCP */
-                                printf(" %-5s %34s:%-5d", "tcp6",
+                                printf(" %-5s %s:%d", "tcp6",
                                     inet_ntop(AF_INET6,
                                         &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_6,
                                         lbuf, INET6_ADDRSTRLEN),
                                     ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport));
 
-                                printf(" %34s:%-5d",
+                                printf(" %s:%d",
                                     inet_ntop(AF_INET6,
                                         &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_6,
                                         rbuf, INET6_ADDRSTRLEN),
                                     ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport));
                             } else {                                                            /* IPv6 UDP */
-                                printf(" %-5s %34s:%-5d", "udp6",
+                                printf(" %-5s %s:%d", "udp6",
                                     inet_ntop(AF_INET6,
                                         &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport,
                                         lbuf, INET6_ADDRSTRLEN),
                                     ntohs(si.psi.soi_proto.pri_in.insi_lport));
 
-                                printf(" %34s:%-5d",
+                                printf(" %s:%d",
                                     inet_ntop(AF_INET6,
                                         &si.psi.soi_proto.pri_in.insi_faddr.ina_6,
                                         rbuf, INET6_ADDRSTRLEN),
@@ -154,4 +184,16 @@ int main(int argc, char *argv[]) {
     }
 
     return 0;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------ */
+void usage(int ecode) {
+    printf("Usage:\n\
+    sockstat [-46uh]\n\n\
+    -4\tShow AF_INET (IPv4) sockets\n\
+    -6\tShow AF_INET (IPv6) sockets\n\
+    -u\tShow AF_LOCAL (UNIX) sockets\n\
+    -h\tThis help message\n\n");
+
+    exit(ecode);
 }
