@@ -41,9 +41,6 @@ int main(int argc, char *argv[]) {
     static struct proc_fdinfo *fds = NULL;                                      /* FDs array */
     int mfds = 0, nfds = 0;                                                     /* Memory and number of FDS */
     struct proc_bsdinfo pinfo;
-    char pname[2 * MAXCOMLEN];                                                  /* Process name */
-    char ppath[PROC_PIDPATHINFO_MAXSIZE];                                       /* Process path */
-
     struct socket_fdinfo si;
 
     char lbuf[INET_ADDRPORTSTRLEN] = {0};                                       /* Buffers to store local & */
