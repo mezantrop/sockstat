@@ -6,5 +6,7 @@
 
 Warning! This is still beta version!
 
+![sockstat](sockstat.png)
+
 If you have an idea, a question, or have found a problem, do not hesitate to open an issue or
 mail me: Mikhail Zakharov <zmey20000@yahoo.com>
