@@ -1,3 +1,7 @@
+# -------------------------------------------------------------------------------------------------------------------- #
+# FreeBSD-like sockstat for macOS using libproc                                                                        #
+# -------------------------------------------------------------------------------------------------------------------- #
+
 # Copyright (c) 2023, Mikhail Zakharov <zmey20000@yahoo.com>
 #
 # Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
