@@ -27,8 +27,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include <sys/types.h>
+#include <sys/sysctl.h>
 #include <pwd.h>
 #include <uuid/uuid.h>
 
@@ -42,15 +44,13 @@ void prt_common(struct passwd *pwd, struct proc_bsdinfo pinfo, int32_t proc_fd);
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 #define PROG_NAME       "sockstat"
-#define PROG_VERSION    "0.2"
+#define PROG_VERSION    "0.3"
 
-#define PID_MAX 99999
-#define FDS_MAX 200000
-
-#define INET_ADDRPORTSTRLEN INET6_ADDRSTRLEN + 6    /* MAX: ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff + ':' + '65535' */
-
+#define MAXPROC         16384;
 /* ------------------------------------------------------------------------------------------------------------------ */
 int main(int argc, char* argv[]) {
+    int mproc = MAXPROC;                                                        /* Max number of concurrent processes */
+    size_t mproc_len = sizeof(mproc);                                           /* Set it enormously big to tune later*/
     int *pids = NULL;                                                           /* PIDs array buffer */
     int npids = 0;                                                              /* Number of PIDs */
     static struct proc_fdinfo *fds = NULL;                                      /* FDs array */
@@ -58,8 +58,8 @@ int main(int argc, char* argv[]) {
     struct proc_bsdinfo pinfo;
     struct socket_fdinfo si;
     struct passwd *pwd;
-    char lbuf[INET_ADDRPORTSTRLEN] = {0};                                       /* Buffers to store local & */
-    char rbuf[INET_ADDRPORTSTRLEN] = {0};                                       /* remote IPv4/6 addresses */
+    char lbuf[INET6_ADDRSTRLEN] = {0};                                          /* Buffers to store local & */
+    char rbuf[INET6_ADDRSTRLEN] = {0};                                          /* remote IPv4/6 addresses */
     int flg, flg_i4 = 0, flg_i6 = 0, flg_u = 0, flg_a = 0;
 
 
@@ -82,27 +82,30 @@ int main(int argc, char* argv[]) {
                 (void)usage(0);
         }
 
-        if (!flg_i4 && !flg_i6 && !flg_u) flg_a = 1;
+    if (!flg_i4 && !flg_i6 && !flg_u) flg_a = 1;
 
-    pids = (int *)malloc(sizeof(int) * PID_MAX);                                /* TODO: REDUCE MEMORY! */
-    npids = proc_listpids(PROC_ALL_PIDS, 0, pids, sizeof(int) * PID_MAX);       /* PIDs */
+    if (sysctlbyname("kern.maxproc", &mproc, &mproc_len, NULL, 0) == -1) {
+        perror("Unable to get the maximum allowed number of processes");
+        printf("Assuming it to be lower than: %d\n", mproc);
+    }
 
-    fds = (struct proc_fdinfo *)malloc(sizeof(struct proc_fdinfo) * FDS_MAX);   /* TODO: REDUCE MEMORY! */
+    pids = (int *)malloc(sizeof(int) * mproc);
+    npids = proc_listpids(PROC_ALL_PIDS, 0, pids, sizeof(int) * mproc);                             /* PIDs */
+
+    fds = (struct proc_fdinfo *)malloc(sizeof(struct proc_fdinfo) * OPEN_MAX);
 
     printf("%-20s %-5s %-31s %-3s %-5s %s\n",
         "USER", "PID", "COMMAND", "FD", "PROTO", "LOCAL ADDRESS / REMOTE ADDRESS");
 
     for (int i = 0; i < npids; i++) {
         /* PID => FDs */
-        if ((mfds = proc_pidinfo(pids[i], PROC_PIDLISTFDS, 0, fds, sizeof(struct proc_fdinfo) * FDS_MAX))) {
+        if ((mfds = proc_pidinfo(pids[i], PROC_PIDLISTFDS, 0, fds, sizeof(struct proc_fdinfo) * OPEN_MAX))) {
             proc_pidinfo(pids[i], PROC_PIDTBSDINFO, 0, &pinfo, sizeof(pinfo));                    /* a PIDs => PID */
 
             nfds = (int)(mfds / sizeof(struct proc_fdinfo));
             for (int k = 0; k < nfds; k++) {
                 if (proc_pidfdinfo(pids[i], fds[k].proc_fd, PROC_PIDFDSOCKETINFO, &si, sizeof(si)) >= sizeof(si)) {
-
                     pwd = getpwuid(pinfo.pbi_uid);
-
                     switch (si.psi.soi_family) {
                         case AF_INET:
                             if (flg_i4 || flg_a) {

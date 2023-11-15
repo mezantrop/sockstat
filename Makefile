@@ -25,13 +25,12 @@
 PREFIX ?= /usr/local
 
 CC = cc
-CFLAGS += -O3 -Wall -DPREFIX='"$(PREFIX)"'
+CFLAGS += -O3 -Wall
 OBJS = sockstat.o
 
 .PHONY:	all clean install uninstall
 
 all: sockstat
-
 
 sockstat: $(OBJS)
 	$(CC) -o $@ $(OBJS)
