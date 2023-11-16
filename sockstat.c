@@ -91,13 +91,14 @@ int main(int argc, char* argv[]) {
 
     pids = (int *)malloc(sizeof(int) * mproc);
     npids = proc_listpids(PROC_ALL_PIDS, 0, pids, sizeof(int) * mproc);                             /* PIDs */
+    /* proc_listpids() returns bytes (!), not count of pids (!) */
 
     fds = (struct proc_fdinfo *)malloc(sizeof(struct proc_fdinfo) * OPEN_MAX);
 
     printf("%-20s %-5s %-31s %-3s %-5s %s\n",
         "USER", "PID", "COMMAND", "FD", "PROTO", "LOCAL ADDRESS / REMOTE ADDRESS");
 
-    for (int i = 0; i < npids; i++) {
+    for (int i = 0; i < npids/sizeof(int); i++) {
         /* PID => FDs */
         if ((mfds = proc_pidinfo(pids[i], PROC_PIDLISTFDS, 0, fds, sizeof(struct proc_fdinfo) * OPEN_MAX))) {
             proc_pidinfo(pids[i], PROC_PIDTBSDINFO, 0, &pinfo, sizeof(pinfo));                    /* a PIDs => PID */
