@@ -1,5 +1,8 @@
 # Sockstat for macOS
 
+[![CodeQL](https://github.com/mezantrop/sockstat/actions/workflows/codeql.yml/badge.svg)](https://github.com/mezantrop/sockstat/actions/workflows/codeql.yml)
+[![C/C++ CI - macOS](https://github.com/mezantrop/sockstat/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/mezantrop/sockstat/actions/workflows/c-cpp.yml)
+
 ## FreeBSD-like sockstat for macOS using libproc
 
 <a href="https://www.buymeacoffee.com/mezantrop" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
