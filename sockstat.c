@@ -25,6 +25,7 @@
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -40,11 +41,10 @@
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 void usage(int ecode);
-void prt_common(struct passwd *pwd, struct proc_bsdinfo pinfo, int32_t proc_fd);
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 #define PROG_NAME       "sockstat"
-#define PROG_VERSION    "0.3"
+#define PROG_VERSION    "0.4"
 
 #define MAXPROC         16384;
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -58,9 +58,9 @@ int main(int argc, char* argv[]) {
     struct proc_bsdinfo pinfo;
     struct socket_fdinfo si;
     struct passwd *pwd;
-    char lbuf[INET6_ADDRSTRLEN] = {0};                                          /* Buffers to store local & */
-    char rbuf[INET6_ADDRSTRLEN] = {0};                                          /* remote IPv4/6 addresses */
+    char buf[INET6_ADDRSTRLEN] = {0};                                           /* Local/Remote IPv4/6 addresses bufs */
     int flg, flg_i4 = 0, flg_i6 = 0, flg_u = 0, flg_a = 0;
+    char outstr[160] = {0};
 
 
     while ((flg = getopt(argc, argv, "46uh")) != -1)
@@ -95,8 +95,8 @@ int main(int argc, char* argv[]) {
 
     fds = (struct proc_fdinfo *)malloc(sizeof(struct proc_fdinfo) * OPEN_MAX);
 
-    printf("%-20s %-5s %-31s %-3s %-5s %s\n",
-        "USER", "PID", "COMMAND", "FD", "PROTO", "LOCAL ADDRESS / REMOTE ADDRESS");
+    printf("%-23s %-5s %-31s %-3s\t%-5s\t%s\t\t%s\n",
+        "USER", "PID", "COMMAND", "FD", "PROTO", "LOCAL ADDRESS", "REMOTE ADDRESS");
 
     for (int i = 0; i < npids/sizeof(int); i++) {
         /* PID => FDs */
@@ -107,97 +107,166 @@ int main(int argc, char* argv[]) {
             for (int k = 0; k < nfds; k++) {
                 if (proc_pidfdinfo(pids[i], fds[k].proc_fd, PROC_PIDFDSOCKETINFO, &si, sizeof(si)) >= sizeof(si)) {
                     pwd = getpwuid(pinfo.pbi_uid);
+
+                    sprintf(outstr, "%-23s %-5d %-31s %-3d",
+                        pwd->pw_name, pinfo.pbi_pid, pinfo.pbi_name[0] ? pinfo.pbi_name : pinfo.pbi_comm,
+                        fds[k].proc_fd);
+
                     switch (si.psi.soi_family) {
                         case AF_INET:
                             if (flg_i4 || flg_a) {
-                                prt_common(pwd, pinfo, fds[k].proc_fd);
                                 if (si.psi.soi_kind == SOCKINFO_TCP) {                              /* IPv4 TCP */
-                                    printf(" %-5s %s:%d", "tcp4",
-                                        inet_ntop(AF_INET,
-                                            &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_46.i46a_addr4,
-                                            lbuf, INET_ADDRSTRLEN),
-                                        ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport));
-
-                                    printf(" %s:%d",
-                                        inet_ntop(AF_INET,
-                                            &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_46.i46a_addr4,
-                                            rbuf, INET_ADDRSTRLEN),
-                                        ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport));
+                                    /* Local address and port */
+                                    if (si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport)
+                                        sprintf(outstr + strlen(outstr), "\ttcp4\t%s:%d",
+                                            si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_46.i46a_addr4.s_addr ==
+                                                INADDR_ANY ? "*" : inet_ntop(AF_INET,
+                                                    &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_46.i46a_addr4,
+                                                    buf, INET_ADDRSTRLEN),
+                                            ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport));
+                                    else
+                                        sprintf(outstr + strlen(outstr), "\ttcp4\t%s:*",
+                                            si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_46.i46a_addr4.s_addr ==
+                                                INADDR_ANY ? "*" : inet_ntop(AF_INET,
+                                                    &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_46.i46a_addr4,
+                                                    buf, INET_ADDRSTRLEN));
+                                    /* Remote address and port */
+                                    if (si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport)
+                                        sprintf(outstr + strlen(outstr), "\t%s:%d",
+                                            si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_46.i46a_addr4.s_addr ==
+                                                INADDR_ANY ? "*" : inet_ntop(AF_INET,
+                                                    &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_46.i46a_addr4,
+                                                    buf, INET_ADDRSTRLEN),
+                                            ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport));
+                                    else
+                                        sprintf(outstr + strlen(outstr), "\t%s:*",
+                                           si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_46.i46a_addr4.s_addr ==
+                                               INADDR_ANY ? "*" : inet_ntop(AF_INET,
+                                                   &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_46.i46a_addr4,
+                                                   buf, INET_ADDRSTRLEN));
                                 } else {                                                            /* IPv4 UDP */
-                                    printf(" %-5s %s:%d", "udp4",
-                                        inet_ntop(AF_INET,
-                                            &si.psi.soi_proto.pri_in.insi_laddr.ina_46.i46a_addr4,
-                                            lbuf, INET_ADDRSTRLEN),
-                                        ntohs(si.psi.soi_proto.pri_in.insi_lport));
-
-                                    printf(" %s:%d",
-                                        inet_ntop(AF_INET,
-                                            &si.psi.soi_proto.pri_in.insi_faddr.ina_46.i46a_addr4,
-                                            rbuf, INET_ADDRSTRLEN),
-                                        ntohs(si.psi.soi_proto.pri_in.insi_fport));
+                                    /* Local address and port */
+                                    if (si.psi.soi_proto.pri_in.insi_lport)
+                                        sprintf(outstr + strlen(outstr), "\tudp4\t%s:%d",
+                                            si.psi.soi_proto.pri_in.insi_laddr.ina_46.i46a_addr4.s_addr ==
+                                                INADDR_ANY ? "*" : inet_ntop(AF_INET,
+                                                    &si.psi.soi_proto.pri_in.insi_laddr.ina_46.i46a_addr4,
+                                                    buf, INET_ADDRSTRLEN),
+                                            ntohs(si.psi.soi_proto.pri_in.insi_lport));
+                                    else
+                                        sprintf(outstr+strlen(outstr), "\tudp4\t%s:*",
+                                            si.psi.soi_proto.pri_in.insi_laddr.ina_46.i46a_addr4.s_addr ==
+                                                INADDR_ANY ? "*" : inet_ntop(AF_INET,
+                                                    &si.psi.soi_proto.pri_in.insi_laddr.ina_46.i46a_addr4,
+                                                    buf, INET_ADDRSTRLEN));
+                                    /* Remote address and port */
+                                    if (si.psi.soi_proto.pri_in.insi_fport)
+                                        sprintf(outstr+strlen(outstr), "\t%s:%d",
+                                            si.psi.soi_proto.pri_in.insi_faddr.ina_46.i46a_addr4.s_addr ==
+                                                INADDR_ANY ? "*" : inet_ntop(AF_INET,
+                                                    &si.psi.soi_proto.pri_in.insi_faddr.ina_46.i46a_addr4,
+                                                    buf, INET_ADDRSTRLEN),
+                                            ntohs(si.psi.soi_proto.pri_in.insi_fport));
+                                    else
+                                        sprintf(outstr + strlen(outstr), "\t%s:*",
+                                            si.psi.soi_proto.pri_in.insi_faddr.ina_46.i46a_addr4.s_addr ==
+                                                INADDR_ANY ? "*" : inet_ntop(AF_INET,
+                                                    &si.psi.soi_proto.pri_in.insi_faddr.ina_46.i46a_addr4,
+                                                    buf, INET_ADDRSTRLEN));
                                 }
-                                printf("\n");
+                                printf("%s\n", outstr);
                             }
                         break;
 
                         case AF_INET6:
                             if (flg_i6 || flg_a) {
-                                prt_common(pwd, pinfo, fds[k].proc_fd);
                                 if (si.psi.soi_kind == SOCKINFO_TCP) {                              /* IPv6 TCP */
-                                    printf(" %-5s %s:%d", "tcp6",
-                                        inet_ntop(AF_INET6,
-                                            &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_6,
-                                            lbuf, INET6_ADDRSTRLEN),
-                                        ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport));
-
-                                    printf(" %s:%d",
-                                        inet_ntop(AF_INET6,
-                                            &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_6,
-                                            rbuf, INET6_ADDRSTRLEN),
-                                        ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport));
+                                    /* Local address and port */
+                                    if (si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport)
+                                        sprintf(outstr + strlen(outstr), "\ttcp6\t%s:%d",
+                                            IN6_IS_ADDR_UNSPECIFIED(&si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_6) ?
+                                                "*" : inet_ntop(AF_INET6,
+                                                    &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_6,
+                                                    buf, INET6_ADDRSTRLEN),
+                                            ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport));
+                                    else
+                                        sprintf(outstr + strlen(outstr), "\ttcp6\t%s:*",
+                                            IN6_IS_ADDR_UNSPECIFIED(&si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_6) ?
+                                                "*" : inet_ntop(AF_INET6,
+                                                    &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_6,
+                                                    buf, INET6_ADDRSTRLEN));
+                                    /* Remote address and port */
+                                    if (si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport)
+                                        sprintf(outstr + strlen(outstr), "\t%s:%d",
+                                            IN6_IS_ADDR_UNSPECIFIED(&si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_6) ?
+                                                "*" : inet_ntop(AF_INET6,
+                                                    &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_6,
+                                                    buf, INET6_ADDRSTRLEN),
+                                            ntohs(si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport));
+                                    else
+                                        sprintf(outstr + strlen(outstr), "\t%s:*",
+                                           IN6_IS_ADDR_UNSPECIFIED(&si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_6) ?
+                                               "*" : inet_ntop(AF_INET6,
+                                                   &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_6,
+                                                   buf, INET6_ADDRSTRLEN));
                                 } else {                                                            /* IPv6 UDP */
-                                    printf(" %-5s %s:%d", "udp6",
-                                        inet_ntop(AF_INET6,
-                                            &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport,
-                                            lbuf, INET6_ADDRSTRLEN),
-                                        ntohs(si.psi.soi_proto.pri_in.insi_lport));
-
-                                    printf(" %s:%d",
-                                        inet_ntop(AF_INET6,
-                                            &si.psi.soi_proto.pri_in.insi_faddr.ina_6,
-                                            rbuf, INET6_ADDRSTRLEN),
-                                        ntohs(si.psi.soi_proto.pri_in.insi_fport));
+                                    /* Local address and port */
+                                    if (si.psi.soi_proto.pri_in.insi_lport)
+                                        sprintf(outstr + strlen(outstr), "\tudp6\t%s:%d",
+                                            IN6_IS_ADDR_UNSPECIFIED(&si.psi.soi_proto.pri_in.insi_laddr.ina_6) ?
+                                                "*" : inet_ntop(AF_INET6,
+                                                    &si.psi.soi_proto.pri_in.insi_laddr.ina_6,
+                                                    buf, INET6_ADDRSTRLEN),
+                                            ntohs(si.psi.soi_proto.pri_in.insi_lport));
+                                    else
+                                        sprintf(outstr + strlen(outstr), "\tudp6\t%s:*",
+                                            IN6_IS_ADDR_UNSPECIFIED(&si.psi.soi_proto.pri_in.insi_laddr.ina_6) ?
+                                                "*" : inet_ntop(AF_INET6,
+                                                    &si.psi.soi_proto.pri_in.insi_laddr.ina_6,
+                                                    buf, INET6_ADDRSTRLEN));
+                                    /* Remote address and port */
+                                    if (si.psi.soi_proto.pri_in.insi_fport)
+                                        sprintf(outstr + strlen(outstr), "\t%s:%d",
+                                            IN6_IS_ADDR_UNSPECIFIED(&si.psi.soi_proto.pri_in.insi_faddr.ina_6) ?
+                                                "*" : inet_ntop(AF_INET6,
+                                                    &si.psi.soi_proto.pri_in.insi_faddr.ina_6,
+                                                    buf, INET6_ADDRSTRLEN),
+                                            ntohs(si.psi.soi_proto.pri_in.insi_fport));
+                                    else
+                                        sprintf(outstr + strlen(outstr), "\t%s:*",
+                                           IN6_IS_ADDR_UNSPECIFIED(&si.psi.soi_proto.pri_in.insi_faddr.ina_6) ?
+                                               "*" : inet_ntop(AF_INET6,
+                                                   &si.psi.soi_proto.pri_in.insi_faddr.ina_6,
+                                                   buf, INET6_ADDRSTRLEN));
                                 }
-                                printf("\n");
+                                printf("%s\n", outstr);
                             }
                         break;
 
                         case AF_UNIX:                                                           /* UNIX socket */
                             if (flg_u || flg_a) {
-                                prt_common(pwd, pinfo, fds[k].proc_fd);
-                                printf(" %-5s", "unix");
+                                sprintf(outstr + strlen(outstr), "\tunix");
                                 if (si.psi.soi_proto.pri_un.unsi_addr.ua_sun.sun_family != AF_UNIX &&
                                     si.psi.soi_proto.pri_un.unsi_addr.ua_sun.sun_family == AF_UNSPEC)
 
-                                    printf(" 0x%16llx",
-                                    si.psi.soi_proto.pri_un.unsi_conn_pcb);
+                                    sprintf(outstr + strlen(outstr), "\t0x%llx",
+                                        si.psi.soi_proto.pri_un.unsi_conn_pcb);
                                 else
-                                    printf(" --");
+                                    sprintf(outstr + strlen(outstr), "\t--");
 
                                 if (si.psi.soi_proto.pri_un.unsi_addr.ua_sun.sun_path[0]) {
-                                    printf(" %s",
+                                    sprintf(outstr + strlen(outstr), "\t%s",
                                         si.psi.soi_proto.pri_un.unsi_addr.ua_sun.sun_path);
                                 } /* else
                                     printf(" No address"); */
-                                printf("\n");
+                                printf("%s\n", outstr);
                             }
                         break;
 
                         default:
                             if (flg_a) {
-                                prt_common(pwd, pinfo, fds[k].proc_fd);
-                                printf(" %-5s", "unkn");
-                                printf("\n");
+                                sprintf(outstr + strlen(outstr), "\tunkn");
+                                printf("%s\n", outstr);
                             }
                         break;
                     }
@@ -220,11 +289,4 @@ void usage(int ecode) {
     -h\tThis help message\n\n");
 
     exit(ecode);
-}
-
-/* ------------------------------------------------------------------------------------------------------------------ */
-void prt_common(struct passwd *pwd, struct proc_bsdinfo pinfo, int32_t proc_fd) {
-    /* NB! pbi_name could be forged: setprogname(3) */
-    printf("%-20s %-5d %-31s %-3d",
-        pwd->pw_name, pinfo.pbi_pid, pinfo.pbi_name[0] ? pinfo.pbi_name : pinfo.pbi_comm, proc_fd);
 }

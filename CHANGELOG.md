@@ -8,3 +8,7 @@
 
 * 2023.11.15  v0.3
   * Better buffers allocation
+
+* 2023.11.17  v0.4
+  * Wildcat addresses in output
+  * Some fixes and optimizations
