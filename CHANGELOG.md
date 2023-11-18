@@ -12,3 +12,6 @@
 * 2023.11.17  v0.4
   * Wildcat addresses in output
   * Some fixes and optimizations
+
+* 2023.11.18  v0.5
+  * `AF_ROUTE`, `AF_NDRV`, `AF_SYSTEM` sockets added

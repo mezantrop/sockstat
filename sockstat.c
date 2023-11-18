@@ -44,7 +44,7 @@ void usage(int ecode);
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 #define PROG_NAME       "sockstat"
-#define PROG_VERSION    "0.4"
+#define PROG_VERSION    "0.5"
 
 #define MAXPROC         16384;
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -90,8 +90,9 @@ int main(int argc, char* argv[]) {
     }
 
     pids = (int *)malloc(sizeof(int) * mproc);
-    npids = proc_listpids(PROC_ALL_PIDS, 0, pids, sizeof(int) * mproc);                             /* PIDs */
-    /* proc_listpids() returns bytes (!), not count of pids (!) */
+    /* PIDs */
+    /* NB! proc_listpids() returns bytes (!), not count of pids (!) */
+    npids = proc_listpids(PROC_ALL_PIDS, 0, pids, sizeof(int) * mproc);
 
     fds = (struct proc_fdinfo *)malloc(sizeof(struct proc_fdinfo) * OPEN_MAX);
 
@@ -101,7 +102,8 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < npids/sizeof(int); i++) {
         /* PID => FDs */
         if ((mfds = proc_pidinfo(pids[i], PROC_PIDLISTFDS, 0, fds, sizeof(struct proc_fdinfo) * OPEN_MAX))) {
-            proc_pidinfo(pids[i], PROC_PIDTBSDINFO, 0, &pinfo, sizeof(pinfo));                    /* a PIDs => PID */
+            /* a PIDs => PID */
+            proc_pidinfo(pids[i], PROC_PIDTBSDINFO, 0, &pinfo, sizeof(pinfo));
 
             nfds = (int)(mfds / sizeof(struct proc_fdinfo));
             for (int k = 0; k < nfds; k++) {
@@ -115,7 +117,7 @@ int main(int argc, char* argv[]) {
                     switch (si.psi.soi_family) {
                         case AF_INET:
                             if (flg_i4 || flg_a) {
-                                if (si.psi.soi_kind == SOCKINFO_TCP) {                              /* IPv4 TCP */
+                                if (si.psi.soi_kind == SOCKINFO_TCP) { /* IPv4 TCP */
                                     /* Local address and port */
                                     if (si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport)
                                         sprintf(outstr + strlen(outstr), "\ttcp4\t%s:%d",
@@ -144,7 +146,7 @@ int main(int argc, char* argv[]) {
                                                INADDR_ANY ? "*" : inet_ntop(AF_INET,
                                                    &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_46.i46a_addr4,
                                                    buf, INET_ADDRSTRLEN));
-                                } else {                                                            /* IPv4 UDP */
+                                } else { /* IPv4 UDP */
                                     /* Local address and port */
                                     if (si.psi.soi_proto.pri_in.insi_lport)
                                         sprintf(outstr + strlen(outstr), "\tudp4\t%s:%d",
@@ -180,7 +182,7 @@ int main(int argc, char* argv[]) {
 
                         case AF_INET6:
                             if (flg_i6 || flg_a) {
-                                if (si.psi.soi_kind == SOCKINFO_TCP) {                              /* IPv6 TCP */
+                                if (si.psi.soi_kind == SOCKINFO_TCP) { /* IPv6 TCP */
                                     /* Local address and port */
                                     if (si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport)
                                         sprintf(outstr + strlen(outstr), "\ttcp6\t%s:%d",
@@ -209,7 +211,7 @@ int main(int argc, char* argv[]) {
                                                "*" : inet_ntop(AF_INET6,
                                                    &si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_6,
                                                    buf, INET6_ADDRSTRLEN));
-                                } else {                                                            /* IPv6 UDP */
+                                } else { /* IPv6 UDP */
                                     /* Local address and port */
                                     if (si.psi.soi_proto.pri_in.insi_lport)
                                         sprintf(outstr + strlen(outstr), "\tudp6\t%s:%d",
@@ -243,7 +245,7 @@ int main(int argc, char* argv[]) {
                             }
                         break;
 
-                        case AF_UNIX:                                                           /* UNIX socket */
+                        case AF_UNIX: /* aka LOCAL socket */
                             if (flg_u || flg_a) {
                                 sprintf(outstr + strlen(outstr), "\tunix");
                                 if (si.psi.soi_proto.pri_un.unsi_addr.ua_sun.sun_family != AF_UNIX &&
@@ -263,9 +265,57 @@ int main(int argc, char* argv[]) {
                             }
                         break;
 
+                        case AF_ROUTE: /* Not much info, do we need more? */
+                            if (flg_a) {
+                                sprintf(outstr + strlen(outstr), "\troute\t0x%llx", si.psi.soi_pcb);
+                                printf("%s\n", outstr);
+                            }
+                        break;
+
+                        case AF_NDRV:
+                            if (flg_a) {
+                                if (si.psi.soi_kind == SOCKINFO_NDRV) { /* is this check useless? */
+                                    sprintf(outstr + strlen(outstr), "\tndrv\tunit: %d name: %s",
+                                        si.psi.soi_proto.pri_ndrv.ndrvsi_if_unit,
+                                        si.psi.soi_proto.pri_ndrv.ndrvsi_if_name);
+                                    printf("%s\n", outstr);
+                                }
+                            }
+                        break;
+
+                        case AF_SYSTEM:
+                            if (flg_a) {
+                                switch (si.psi.soi_kind) {
+                                    case SOCKINFO_KERN_EVENT:
+                                        sprintf(outstr + strlen(outstr), "\tkevt\t0x%llx evt: 0x%x:0x%x:0x%x",
+                                            si.psi.soi_pcb,
+                                            si.psi.soi_proto.pri_kern_event.kesi_vendor_code_filter,
+                                            si.psi.soi_proto.pri_kern_event.kesi_class_filter,
+                                            si.psi.soi_proto.pri_kern_event.kesi_subclass_filter);
+                                        printf("%s\n", outstr);
+                                    break;
+
+                                    case SOCKINFO_KERN_CTL:
+                                        sprintf(outstr + strlen(outstr), "\tkctl\t0x%llx ctl: %s id: %d unit: %d",
+                                            si.psi.soi_pcb,
+                                            si.psi.soi_proto.pri_kern_ctl.kcsi_name,
+                                            si.psi.soi_proto.pri_kern_ctl.kcsi_id,
+                                            si.psi.soi_proto.pri_kern_ctl.kcsi_unit);
+                                        printf("%s\n", outstr);
+                                    break;
+
+                                    default: /* May this happen? */
+                                        sprintf(outstr + strlen(outstr), "\tsunkn");
+                                        printf("%s\n", outstr);
+                                    break;
+                                }
+                            }
+                        break;
+
+
                         default:
                             if (flg_a) {
-                                sprintf(outstr + strlen(outstr), "\tunkn");
+                                sprintf(outstr + strlen(outstr), "\tunk");
                                 printf("%s\n", outstr);
                             }
                         break;
