@@ -44,7 +44,7 @@ void usage(int ecode);
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 #define PROG_NAME       "sockstat"
-#define PROG_VERSION    "0.6"
+#define PROG_VERSION    "1.0"
 
 #define MAXPROC         16384;
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -60,54 +60,35 @@ int main(int argc, char* argv[]) {
     struct passwd *pwd;
     char buf[INET6_ADDRSTRLEN] = {0};                                       /* Local/Remote IPv4/6 addresses bufs */
     char outstr[160] = {0};
+    int ready = 0;                                                          /* Socket info collected - ready to print */
+    int listen = 1;                                                         /* Socket is listening for flg_l output */
+
     int flg = 0;                                                            /* CLI flags, see below */
     int flg_i4 = 0;                                                         /* IPv4 */
     int flg_i6 = 0;                                                         /* IPv6 */
     int flg_k = 0;                                                          /* Kern/system sockets */
     int flg_l = 0;                                                          /* TCP LISTENing sockets */
-    int flg_N = 0;                                                          /* NDRV sockets */
+    int flg_n = 0;                                                          /* NDRV sockets */
+    int flg_q = 0;                                                          /* Quiet - hide header */
     int flg_r = 0;                                                          /* ROUTE sockets */
     int flg_u = 0;                                                          /* UNIX aka LOCAL sockets */
     int flg_a = 0;                                                          /* pseudo-flag ALL socket flags are on */
-    int ready = 0;
-    int listen = 1;
 
-    while ((flg = getopt(argc, argv, "46klNruh")) != -1)
+    while ((flg = getopt(argc, argv, "46klnrquh")) != -1)
         switch(flg) {
-            case '4':
-                flg_i4 = 1;
-            break;
-
-            case '6':
-                flg_i6 = 1;
-            break;
-
-            case 'k':
-                flg_k = 1;
-            break;
-
-            case 'l':
-                flg_l = 1;
-            break;
-
-            case 'N':
-                flg_N = 1;
-            break;
-
-            case 'r':
-                flg_r = 1;
-            break;
-
-            case 'u':
-                flg_u = 1;
-            break;
-
-            case 'h':
-            default:
-                (void)usage(0);
+            case '4': flg_i4 = 1; break;
+            case '6': flg_i6 = 1; break;
+            case 'k': flg_k = 1; break;
+            case 'l': flg_l = 1; break;
+            case 'n': flg_n = 1; break;
+            case 'q': flg_q = 1; break;
+            case 'r': flg_r = 1; break;
+            case 'u': flg_u = 1; break;
+            case 'h': (void)usage(0); break;
+            default: (void)usage(1);
         }
 
-    if (!flg_i4 && !flg_i6 && !flg_k && !flg_N && !flg_r && !flg_u) flg_a = 1;
+    if (!flg_i4 && !flg_i6 && !flg_k && !flg_n && !flg_r && !flg_u) flg_a = 1;
 
     if (sysctlbyname("kern.maxproc", &mproc, &mproc_len, NULL, 0) == -1) {
         perror("Unable to get the maximum allowed number of processes");
@@ -121,8 +102,9 @@ int main(int argc, char* argv[]) {
 
     fds = (struct proc_fdinfo *)malloc(sizeof(struct proc_fdinfo) * OPEN_MAX);
 
-    printf("%-23s %-5s %-31s %-3s\t%-5s\t%s\t\t%s\n",
-        "USER", "PID", "COMMAND", "FD", "PROTO", "LOCAL ADDRESS", "REMOTE ADDRESS");
+    if (!flg_q)
+        printf("%-23s %-5s %-31s %-3s\t%-5s\t%s\t\t%s\n",
+            "USER", "PID", "COMMAND", "FD", "PROTO", "LOCAL ADDRESS", "REMOTE ADDRESS");
 
     for (int i = 0; i < npids/sizeof(int); i++) {
         /* PID => FDs */
@@ -280,7 +262,7 @@ int main(int argc, char* argv[]) {
                         break;
 
                         case AF_NDRV:
-                            if (flg_N || flg_a) {
+                            if (flg_n || flg_a) {
                                 if (si.psi.soi_kind == SOCKINFO_NDRV) { /* is this check useless? */
                                     sprintf(outstr + strlen(outstr), "\tndrv\tunit: %d name: %s",
                                         si.psi.soi_proto.pri_ndrv.ndrvsi_if_unit,
@@ -341,18 +323,20 @@ int main(int argc, char* argv[]) {
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 void usage(int ecode) {
-    printf("Usage:\n\
-    sockstat [-46klNruh]\n\n\
+    printf("%s-%s\n\n\
+Usage:\n\
+    sockstat [-46klNrquh]\n\n\
     -4\tShow AF_INET (IPv4) sockets\n\
     -6\tShow AF_INET (IPv6) sockets\n\
     -k\tShow AF_SYSTEM (Kernel) sockets\n\
-    -N\tShow AF_NDRV sockets\n\
+    -n\tShow AF_NDRV sockets\n\
     -r\tShow AF_ROUTE sockets\n\
     -u\tShow AF_LOCAL (UNIX) sockets\n\
     \n\
     -l\tShow only LISTENing sockets\n\
+    -q\tQuiet mode - suppress header\n\
     \n\
-    -h\tThis help message\n\n");
+    -h\tThis help message\n\n", PROG_NAME, PROG_VERSION);
 
     exit(ecode);
 }

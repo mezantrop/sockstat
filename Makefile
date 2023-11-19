@@ -32,8 +32,14 @@ OBJS = sockstat.o
 
 all: sockstat
 
-sockstat: $(OBJS)
-	$(CC) -o $@ $(OBJS)
+sockstat: sockstat_x64 sockstat_arm
+	lipo -create -output sockstat sockstat_x64 sockstat_arm
+
+sockstat_x64:
+	$(CC) -o sockstat_x64 -target x86_64-apple-macos10.12 sockstat.c
+
+sockstat_arm:
+	$(CC) -o sockstat_arm -target arm64-apple-macos11 sockstat.c
 
 install: sockstat
 	install -d $(PREFIX)/bin/
@@ -43,6 +49,4 @@ uninstall:
 	rm -f $(PREFIX)/bin/sockstat
 
 clean:
-	rm -rf  sockstat *.o *.dSYM *.core
-
-# sockstat.o: sockstat.h
+	rm -rf sockstat sockstat_x64 sockstat_arm *.o *.dSYM *.core
