@@ -15,3 +15,7 @@
 
 * 2023.11.18  v0.5
   * `AF_ROUTE`, `AF_NDRV`, `AF_SYSTEM` sockets added
+
+* 2023.11.19  v0.6
+  * LISTENING sockes filter
+  * Many optimizations
