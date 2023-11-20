@@ -7,7 +7,7 @@
 
 <a href="https://www.buymeacoffee.com/mezantrop" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
 
-![sockstat](sockstat.png)
+![sockstat](media/sockstat.png)
 
 ### Installation
 
@@ -49,6 +49,13 @@ Usage:
 
     -h  This help message
 ```
+
+### Performance
+
+I do not think, performance plays here any role, but anywhy: the same good old MacBook Air late 2015, idle state.
+Graphs `lsof` vs `sockstat` - the lower, the better.
+
+![lsof](media/lsof_time.png) ![sockstat](media/sockstat_time.png)
 
 If you have an idea, a question, or found a problem, do not hesitate to open an
 [issue](https://github.com/mezantrop/sockstat/issues) or mail me: Mikhail Zakharov <zmey20000@yahoo.com>
