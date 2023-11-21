@@ -21,7 +21,7 @@ You can compile everything from sources. To install `sockstat` into `bin` direct
 make install clean
 ```
 
-If a custom installation path, define `PREFIX`:
+If using a custom installation path, define `PREFIX`:
 
 ```sh
 make install clean PREFIX=/path/to/install
