@@ -44,7 +44,7 @@ void usage(int ecode);
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 #define PROG_NAME       "sockstat"
-#define PROG_VERSION    "1.0"
+#define PROG_VERSION    "1.0.1"
 
 #define MAXPROC         16384;
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
     fds = (struct proc_fdinfo *)malloc(sizeof(struct proc_fdinfo) * OPEN_MAX);
 
     if (!flg_q)
-        printf("%-23s %-5s %-31s %-3s\t%-5s\t%s\t\t%s\n",
+        printf("%-23s\t%-5s\t%-31s\t%-3s\t%-5s\t%-19s\t%s\n",
             "USER", "PID", "COMMAND", "FD", "PROTO", "LOCAL ADDRESS", "REMOTE ADDRESS");
 
     for (int i = 0; i < npids/sizeof(int); i++) {
@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
                 if (proc_pidfdinfo(pids[i], fds[k].proc_fd, PROC_PIDFDSOCKETINFO, &si, sizeof(si)) >= sizeof(si)) {
                     pwd = getpwuid(pinfo.pbi_uid);
 
-                    sprintf(outstr, "%-23s %-5d %-31s %-3d",
+                    sprintf(outstr, "%-23s\t%-5d\t%-31s\t%-3d",
                         pwd->pw_name, pinfo.pbi_pid, pinfo.pbi_name[0] ? pinfo.pbi_name : pinfo.pbi_comm,
                         fds[k].proc_fd);
 
@@ -247,7 +247,7 @@ int main(int argc, char* argv[]) {
                                     sprintf(outstr + strlen(outstr), "\t%s",
                                         si.psi.soi_proto.pri_un.unsi_caddr.ua_sun.sun_path);
                                 else {
-                                    sprintf(outstr + strlen(outstr), "\t-> ??");
+                                    sprintf(outstr + strlen(outstr), "\t->??");
                                     listen = 1;
                                 }
                                 ready = 1;
@@ -310,7 +310,7 @@ int main(int argc, char* argv[]) {
                         break;
                     }
                     if (ready && ((flg_l && listen) || !flg_l)) {
-                        printf("%s\n", outstr);
+                        puts(outstr);
                     }
                 }
             }
@@ -340,3 +340,4 @@ Usage:\n\
 
     exit(ecode);
 }
+

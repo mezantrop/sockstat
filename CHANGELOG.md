@@ -22,3 +22,7 @@
 
 * 2023.11.19  v1.0
   * The first release
+
+* 2023.11.21  v1.0.1
+  * `make all` produces binaries for x64 and Arm architectures; `make universal` creates a universal binary
+  * `Tab` separates fields which may also contain `space`-chars as fillers

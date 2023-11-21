@@ -26,19 +26,24 @@ PREFIX ?= /usr/local
 
 CC = cc
 CFLAGS += -O3 -Wall
-OBJS = sockstat.o
+OBJ = sockstat.o
 
-.PHONY:	all clean install uninstall
+.PHONY:	all clean install uninstall universal
 
 all: sockstat
 
-sockstat: sockstat_x64 sockstat_arm
+sockstat: $(OBJ)
+	$(CC) -o sockstat sockstat.c
+
+universal: sockstat_x64 sockstat_arm
 	lipo -create -output sockstat sockstat_x64 sockstat_arm
 
 sockstat_x64:
+	$(CC) $(CFLAGS) -c -o sockstat.o -target x86_64-apple-macos10.12 sockstat.c
 	$(CC) -o sockstat_x64 -target x86_64-apple-macos10.12 sockstat.c
 
 sockstat_arm:
+	$(CC) $(CFLAGS) -c -o sockstat.o -target arm64-apple-macos11 sockstat.c
 	$(CC) -o sockstat_arm -target arm64-apple-macos11 sockstat.c
 
 install: sockstat
@@ -50,3 +55,5 @@ uninstall:
 
 clean:
 	rm -rf sockstat sockstat_x64 sockstat_arm *.o *.dSYM *.core
+
+sockstat.o: sockstat.c
