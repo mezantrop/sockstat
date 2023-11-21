@@ -9,18 +9,28 @@
 
 ![sockstat](media/sockstat.png)
 
-### Installation
+### Download
 
-To install `sockstat` into `bin` directory under `/usr/local`, run:
+See releases and [Download](https://github.com/mezantrop/sockstat/releases) a precompiled universal binary
+
+### Build from sources
+
+You can compile everything from sources. To install `sockstat` into `bin` directory under `/usr/local`, run:
 
 ```sh
 make install clean
 ```
 
-If a different installation path is required, define `PREFIX`:
+If a custom installation path, define `PREFIX`:
 
 ```sh
 make install clean PREFIX=/path/to/install
+```
+
+To build a universal binary suitable both for x64 and M-processors:
+
+```sh
+make universal install clean
 ```
 
 To deinstall:
@@ -32,7 +42,7 @@ make uninstall
 ### Usage
 
 ```
-sockstat-1.0
+sockstat-1.0.1
 
 Usage:
     sockstat [-46klNrquh]
