@@ -60,6 +60,8 @@ Usage:
     -h  This help message
 ```
 
+Run `sockstat` as `root` to see all sockets
+
 ### Performance
 
 I do not think, performance plays here any role, but anywhy: the same good old MacBook Air late 2015, idle state.
