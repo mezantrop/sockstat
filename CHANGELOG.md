@@ -27,6 +27,6 @@
   * `make all` produces binaries for x64 and Arm architectures; `make universal` creates a universal binary
   * `Tab` separates fields which may also contain `space`-chars as fillers
 
-* 2024.06.11 v1.0.2
+* 2024.06.11  v1.0.2
   * `-v` command-line argument to show version
   * Cosmetic changes to fix typos
