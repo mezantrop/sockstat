@@ -3,7 +3,7 @@
 /* ------------------------------------------------------------------------------------------------------------------ */
 
 /*
-* Copyright (c) 2023, Mikhail Zakharov <zmey20000@yahoo.com>
+* Copyright (c) 2023-2024, Mikhail Zakharov <zmey20000@yahoo.com>
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
 * following conditions are met:
@@ -44,7 +44,7 @@ void usage(int ecode);
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 #define PROG_NAME       "sockstat"
-#define PROG_VERSION    "1.0.1"
+#define PROG_VERSION    "1.0.2"
 
 #define MAXPROC         16384;
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
     int flg_u = 0;                                                          /* UNIX aka LOCAL sockets */
     int flg_a = 0;                                                          /* pseudo-flag ALL socket flags are on */
 
-    while ((flg = getopt(argc, argv, "46klnrquh")) != -1)
+    while ((flg = getopt(argc, argv, "46klnrquhv")) != -1)
         switch(flg) {
             case '4': flg_i4 = 1; break;
             case '6': flg_i6 = 1; break;
@@ -85,6 +85,7 @@ int main(int argc, char* argv[]) {
             case 'r': flg_r = 1; break;
             case 'u': flg_u = 1; break;
             case 'h': (void)usage(0); break;
+            case 'v': printf("%s %s\n", PROG_NAME, PROG_VERSION); exit(0); break;
             default: (void)usage(1);
         }
 
@@ -323,11 +324,9 @@ int main(int argc, char* argv[]) {
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 void usage(int ecode) {
-    printf("%s-%s\n\n\
-Usage:\n\
-    sockstat [-46klNrquh]\n\n\
+    printf("Usage: sockstat [-46klNrquhv]\n\n\
     -4\tShow AF_INET (IPv4) sockets\n\
-    -6\tShow AF_INET (IPv6) sockets\n\
+    -6\tShow AF_INET6 (IPv6) sockets\n\
     -k\tShow AF_SYSTEM (Kernel) sockets\n\
     -n\tShow AF_NDRV sockets\n\
     -r\tShow AF_ROUTE sockets\n\
@@ -336,8 +335,8 @@ Usage:\n\
     -l\tShow only LISTENing sockets\n\
     -q\tQuiet mode - suppress header\n\
     \n\
-    -h\tThis help message\n\n", PROG_NAME, PROG_VERSION);
+    -h\tThis help message\n\
+    -v\tShov program version\n\n");
 
     exit(ecode);
 }
-

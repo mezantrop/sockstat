@@ -42,13 +42,10 @@ make uninstall
 ### Usage
 
 ```
-sockstat-1.0.1
-
-Usage:
-    sockstat [-46klNrquh]
+Usage: sockstat [-46klNrquhv]
 
     -4  Show AF_INET (IPv4) sockets
-    -6  Show AF_INET (IPv6) sockets
+    -6  Show AF_INET6 (IPv6) sockets
     -k  Show AF_SYSTEM (Kernel) sockets
     -n  Show AF_NDRV sockets
     -r  Show AF_ROUTE sockets
@@ -58,6 +55,7 @@ Usage:
     -q  Quiet mode - suppress header
 
     -h  This help message
+    -v  Shov program version
 ```
 
 Run `sockstat` as `root` to see all sockets
