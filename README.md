@@ -55,7 +55,7 @@ Usage: sockstat [-46klNrquhv]
     -q  Quiet mode - suppress header
 
     -h  This help message
-    -v  Shov program version
+    -v  Show program version
 ```
 
 Run `sockstat` as `root` to see all sockets

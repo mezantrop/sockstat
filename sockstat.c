@@ -44,7 +44,7 @@ void usage(int ecode);
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 #define PROG_NAME       "sockstat"
-#define PROG_VERSION    "1.0.2"
+#define PROG_VERSION    "1.0.3"
 
 #define MAXPROC         16384;
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -336,7 +336,7 @@ void usage(int ecode) {
     -q\tQuiet mode - suppress header\n\
     \n\
     -h\tThis help message\n\
-    -v\tShov program version\n\n");
+    -v\tShow program version\n\n");
 
     exit(ecode);
 }

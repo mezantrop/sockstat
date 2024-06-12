@@ -30,3 +30,6 @@
 * 2024.06.11  v1.0.2
   * `-v` command-line argument to show version
   * Cosmetic changes to fix typos
+
+* 2024.06.11  v1.0.3
+  * `-v` flag typo fix in description
