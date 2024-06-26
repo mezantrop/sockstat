@@ -44,7 +44,7 @@ void usage(int ecode);
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 #define PROG_NAME       "sockstat"
-#define PROG_VERSION    "1.0.3"
+#define PROG_VERSION    "1.1.0"
 
 #define MAXPROC         16384;
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -70,14 +70,19 @@ int main(int argc, char* argv[]) {
     int flg_l = 0;                                                          /* TCP LISTENing sockets */
     int flg_n = 0;                                                          /* NDRV sockets */
     int flg_q = 0;                                                          /* Quiet - hide header */
+    int flg_T = 0;                                                          /* Include TCP */
+    int flg_U = 0;                                                          /* Include UDP */
     int flg_r = 0;                                                          /* ROUTE sockets */
     int flg_u = 0;                                                          /* UNIX aka LOCAL sockets */
     int flg_a = 0;                                                          /* pseudo-flag ALL socket flags are on */
 
-    while ((flg = getopt(argc, argv, "46klnrquhv")) != -1)
+
+    while ((flg = getopt(argc, argv, "46TUklnrquhv")) != -1)
         switch(flg) {
             case '4': flg_i4 = 1; break;
             case '6': flg_i6 = 1; break;
+            case 'T': flg_T = 1; break;
+            case 'U': flg_U = 1; break;
             case 'k': flg_k = 1; break;
             case 'l': flg_l = 1; break;
             case 'n': flg_n = 1; break;
@@ -89,7 +94,7 @@ int main(int argc, char* argv[]) {
             default: (void)usage(1);
         }
 
-    if (!flg_i4 && !flg_i6 && !flg_k && !flg_n && !flg_r && !flg_u) flg_a = 1;
+    if (!flg_i4 && !flg_i6 && !flg_T && !flg_U && !flg_k && !flg_n && !flg_r && !flg_u) flg_a = 1;
 
     if (sysctlbyname("kern.maxproc", &mproc, &mproc_len, NULL, 0) == -1) {
         perror("Unable to get the maximum allowed number of processes");
@@ -127,8 +132,8 @@ int main(int argc, char* argv[]) {
 
                     switch (si.psi.soi_family) {
                         case AF_INET:
-                            if (flg_i4 || flg_a) {
-                                if (si.psi.soi_kind == SOCKINFO_TCP) { /* IPv4 TCP */
+                            if (flg_i4 || flg_a || flg_T || flg_U) {
+                                if (si.psi.soi_kind == SOCKINFO_TCP && (flg_a || flg_T)) { /* IPv4 TCP */
                                     /* Local address and port */
                                     if (si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport) {
                                         sprintf(outstr + strlen(outstr), "\ttcp4\t%s:%d",
@@ -153,7 +158,7 @@ int main(int argc, char* argv[]) {
                                         sprintf(outstr + strlen(outstr), "\t*:*");
                                         ready = 1;
                                     }
-                                } else { /* IPv4 UDP */
+                                } else if (flg_a || flg_U) { /* IPv4 UDP */
                                     /* Local address and port */
                                     if (si.psi.soi_proto.pri_in.insi_lport) {
                                         sprintf(outstr + strlen(outstr), "\tudp4\t%s:%d",
@@ -179,8 +184,8 @@ int main(int argc, char* argv[]) {
                         break;
 
                         case AF_INET6:
-                            if (flg_i6 || flg_a) {
-                                if (si.psi.soi_kind == SOCKINFO_TCP) { /* IPv6 TCP */
+                            if (flg_i6 || flg_a || flg_T || flg_U) {
+                                if (si.psi.soi_kind == SOCKINFO_TCP && (flg_a || flg_T)) { /* IPv6 TCP */
                                     /* Local address and port */
                                     if (si.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport) {
                                         sprintf(outstr + strlen(outstr), "\ttcp6\t%s:%d",
@@ -205,7 +210,7 @@ int main(int argc, char* argv[]) {
                                         sprintf(outstr + strlen(outstr), "\t*:*");
                                         ready = 1;
                                     }
-                                } else { /* IPv6 UDP */
+                                } else if (flg_a || flg_U) { /* IPv6 UDP */
                                     listen = 1;
                                     /* Local address and port */
                                     if (si.psi.soi_proto.pri_in.insi_lport) {
@@ -324,9 +329,11 @@ int main(int argc, char* argv[]) {
 
 /* ------------------------------------------------------------------------------------------------------------------ */
 void usage(int ecode) {
-    printf("Usage: sockstat [-46klNrquhv]\n\n\
+    printf("Usage: sockstat [-46TUklnrquhv]\n\n\
     -4\tShow AF_INET (IPv4) sockets\n\
     -6\tShow AF_INET6 (IPv6) sockets\n\
+    -T\tShow TCP protocol\n\
+    -U\tShow UDP protocol\n\
     -k\tShow AF_SYSTEM (Kernel) sockets\n\
     -n\tShow AF_NDRV sockets\n\
     -r\tShow AF_ROUTE sockets\n\

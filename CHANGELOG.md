@@ -33,3 +33,6 @@
 
 * 2024.06.11  v1.0.3
   * `-v` flag typo fix in description
+
+* 2024.06.26  v1.1.0
+  * `-T` and `-U` flags to specify TCP and UDP protocol filters

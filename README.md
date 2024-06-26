@@ -41,11 +41,13 @@ make uninstall
 
 ### Usage
 
-```
-Usage: sockstat [-46klNrquhv]
+```sh
+Usage: sockstat [-46TUklnrquhv]
 
     -4  Show AF_INET (IPv4) sockets
     -6  Show AF_INET6 (IPv6) sockets
+    -T  Show TCP protocol
+    -U  Show UDP protocol
     -k  Show AF_SYSTEM (Kernel) sockets
     -n  Show AF_NDRV sockets
     -r  Show AF_ROUTE sockets
@@ -58,7 +60,7 @@ Usage: sockstat [-46klNrquhv]
     -v  Show program version
 ```
 
-Run `sockstat` as `root` to see all sockets
+Run `sockstat` as `root` to see **all**, (not only the current user's) sockets
 
 ### Performance
 
