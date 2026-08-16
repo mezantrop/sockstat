@@ -36,3 +36,7 @@
 
 * 2024.06.26  v1.1.0
   * `-T` and `-U` flags to specify TCP and UDP protocol filters
+
+* 2026.08.16  v1.1.1
+  * Fix `-4` and `-6` selective output
+  * Minor tweaks: `sprintf()` -> `snprintf()`; exit on `malloc()` errors, etc.
